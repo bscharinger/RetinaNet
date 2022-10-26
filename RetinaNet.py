@@ -5,6 +5,13 @@ import numpy as np
 
 
 def build_head(output_filters, bias_init):
+    """
+    Builds the class and box prediction heads
+    :param output_filters: Number of convolution filters in the final layer
+    :param bias_init: Bias initializer for the final convolution layer
+    :return: A keras sequential model representing either the classification or the box regression head,
+             depending on <output_filters>
+    """
     head = keras.Sequential([keras.Input(shape=[None, None, 256])])
     kernel_init = tf.initializers.RandomNormal(0.0, 0.01)
     for _ in range(4):
@@ -16,6 +23,9 @@ def build_head(output_filters, bias_init):
 
 
 class RetinaNet(keras.Model):
+    """
+    Subclassed keras model implementing the RetinaNet architecture
+    """
     def __init__(self, num_classes, backbone=None, **kwargs):
         super(RetinaNet, self).__init__(name="RetinaNet", **kwargs)
         self.fpn = FeaturePyramid(backbone)
@@ -26,13 +36,12 @@ class RetinaNet(keras.Model):
 
     def call(self, image, training=False):
         features = self.fpn(image, training=training)
-        N = tf.shape(image)[0]
+        n = tf.shape(image)[0]
         cls_out = []
         box_out = []
         for feature in features:
-            box_out.append(tf.reshape(self.box_head(feature), [N, -1, 4]))
-            cls_out.append(tf.reshape(self.cls_head(feature), [N, -1, self.num_classes]))
+            box_out.append(tf.reshape(self.box_head(feature), [n, -1, 4]))
+            cls_out.append(tf.reshape(self.cls_head(feature), [n, -1, self.num_classes]))
         cls_out = tf.concat(cls_out, axis=1)
         box_out = tf.concat(box_out, axis=1)
         return tf.concat([box_out, cls_out], axis=-1)
-

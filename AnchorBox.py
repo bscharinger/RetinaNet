@@ -2,6 +2,9 @@ import tensorflow as tf
 
 
 class AnchorBox:
+    """
+    Class for generating anchor boxes that are used to predict object bounding boxes
+    """
     def __init__(self):
         self.asp_rat = [0.5, 1.0, 2.0]
         self.scales = [2 ** x for x in [0, 1/3, 2/3]]
@@ -12,6 +15,11 @@ class AnchorBox:
         self._anchor_dims = self._compute_dims()
 
     def _compute_dims(self):
+        """
+        Computes the anchor box dimensions for all ratios and scales at all feature pyramid levels.
+
+        :return: Anchor box dimensions
+        """
         anchor_dims_all = []
         for area in self._areas:
             anchor_dims = []
@@ -25,6 +33,14 @@ class AnchorBox:
         return anchor_dims_all
 
     def _get_anchors(self, feat_height, feat_width, level):
+        """
+        Generates the anchor boxes for a given feature map size and level
+
+        :param feat_height: Int representing the height of the feature map
+        :param feat_width: Int representing the width of the feature map
+        :param level: Int representing the level of the feature map in the feature pyramid
+        :return: Anchor boxes with the shape (feature_height * feature width * num_anchors, 4)
+        """
         rx = tf.range(feat_width, dtype=tf.float32) + 0.5
         ry = tf.range(feat_height, dtype=tf.float32) + 0.5
         centers = tf.stack(tf.meshgrid(rx, ry), axis=-1) * self._strides[level-3]
@@ -35,7 +51,13 @@ class AnchorBox:
         return tf.reshape(anchors, [feat_height * feat_width * self._num_anchors, 4])
 
     def get_anchors(self, image_height, image_width):
+        """
+        Generates the anchor boxes for all feature maps of the feature pyramid
+
+        :param image_height: Height of the input image
+        :param image_width: Width of the input image
+        :return: Anchor boxes for all feature maps stacked as a single tensor with shape (Num_anchors_total, 4)
+        """
         anchors = [self._get_anchors(tf.math.ceil(image_height / 2 ** i), tf.math.ceil(image_width / 2 ** i), i, )
                    for i in range(3, 8)]
         return tf.concat(anchors, axis=0)
-

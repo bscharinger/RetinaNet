@@ -3,6 +3,10 @@ from tensorflow import keras
 
 
 def get_backbone():
+    """
+    Builds a ResNet50 backbone with pre-trained image-net weights
+    :return: ResNEt50 model with feature maps as output
+    """
     backbone = keras.applications.ResNet50(include_top=False, input_shape=[None, None, 3])
     c3_out, c4_out, c5_out = [backbone.get_layer(layer_name).output
                               for layer_name in ["conv3_block4_out", "conv4_block6_out", "conv5_block3_out"]]
@@ -10,6 +14,9 @@ def get_backbone():
 
 
 class FeaturePyramid(keras.layers.Layer):
+    """
+    Builds the feature pyramid with the feature maps extracted form the ResNet50 backbone
+    """
     def __init__(self, backbone=None, **kwargs):
         super(FeaturePyramid, self).__init__(name="FeaturePyramid", **kwargs)
         self.backbone = backbone if backbone else get_backbone()
@@ -35,5 +42,4 @@ class FeaturePyramid(keras.layers.Layer):
         p5_out = self.conv_c5_3x3(p5_out)
         p6_out = self.conv_c6_3x3(c5_out)
         p7_out = self.conv_c7_3x3(tf.nn.relu(p6_out))
-        return (p3_out, p4_out, p5_out, p6_out, p7_out)
-
+        return p3_out, p4_out, p5_out, p6_out, p7_out

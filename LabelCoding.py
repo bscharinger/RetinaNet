@@ -4,12 +4,34 @@ import bbox_utils
 
 
 class LabelEncoder:
+    """
+    Class to transform the raw labels into targets for training
+    """
 
     def __init__(self):
         self._anchor_box = AnchorBox.AnchorBox()
         self._box_var = tf.convert_to_tensor([0.1, 0.1, 0.2, 0.2], dtype=tf.float32)
 
-    def _match_anchor_boxes(self, anchor_boxes, gt_boxes, match_iou=0.5, ignore_iou=0.4):
+    @staticmethod
+    def _match_anchor_boxes(anchor_boxes, gt_boxes, match_iou=0.5, ignore_iou=0.4):
+        """
+        Matches the ground truth boxes to anchor boxes based in IOU
+        1. Calculate pairwise IOU for M anchor boxes and N ground truth bounding boxes
+        2. Assign ground truth bounding box  with maximum IOU in each row to anchor its anchor box
+           provided the IOU is greater than <match_iou>
+        3. If the maximum IOU in a row is less than <match_iou> the anchor box is assigned with the background class
+        4. Remaining anchor boxes are ignored during training
+
+        :param anchor_boxes: Tensor with the shape (Num_anchors_total, 4) containing all anchor boxes for
+                             given image shape
+        :param gt_boxes: Tensor with the shape (num_objects, 4) containing the ground truth bounding boxes
+                         in format (x_center, y_center, width, height)
+        :param match_iou: Float representing the minimum IOU for assigning GT bboxes to anchor boxes
+        :param ignore_iou: Float representing IOU threshold, under which an anchor box is assigned to background
+        :return: matched_gt_idx: Index of matched object
+                 positive_mask: Mask for anchor boxes that are assigned ground truth boxes
+                 ignore_mask: Mask for anchor boxes that are ignored during training
+        """
         iou_mat = bbox_utils.calc_iou(anchor_boxes, gt_boxes)
         max_iou = tf.reduce_max(iou_mat, axis=1)
         matched_gt_idx = tf.argmax(iou_mat, axis=1)
@@ -19,12 +41,27 @@ class LabelEncoder:
         return matched_gt_idx, tf.cast(positive_mask, dtype=tf.float32), tf.cast(ignore_mask, dtype=tf.float32)
 
     def _compute_box_target(self, anchor_boxes, matched_gt_boxes):
+        """
+        Transforms the ground truth boxes into targets for training
+
+        :param anchor_boxes: Anchor boxes
+        :param matched_gt_boxes: Matched GT boxes
+        :return: Training targets
+        """
         box_target = tf.concat([(matched_gt_boxes[:, :2] - anchor_boxes[:, :2]) / anchor_boxes[:, 2:],
                                 tf.math.log(matched_gt_boxes[:, 2:] / anchor_boxes[:, 2:])], axis=-1)
         box_target = box_target / self._box_var
         return box_target
 
     def _encode_sample(self, image_shape, gt_boxes, cls_ids):
+        """
+        Creates box and classification targets for a single sample
+
+        :param image_shape: Image shape
+        :param gt_boxes: Ground truth boxes
+        :param cls_ids: Class IDs
+        :return: Label
+        """
         anchor_boxes = self._anchor_box.get_anchors(image_shape[1], image_shape[2])
         cls_ids = tf.cast(cls_ids, dtype=tf.float32)
         matched_gt_idx, positive_mask, ignore_mask = self._match_anchor_boxes(anchor_boxes, gt_boxes)
@@ -38,6 +75,13 @@ class LabelEncoder:
         return label
 
     def encode_batch(self, batch_images, gt_boxes, cls_ids):
+        """
+        Encodes box and classification targets for a batch
+        :param batch_images:
+        :param gt_boxes:
+        :param cls_ids:
+        :return:
+        """
         images_shape = tf.shape(batch_images)
         batch_size = images_shape[0]
 
@@ -50,9 +94,23 @@ class LabelEncoder:
 
 
 class DecodePredictions(tf.keras.layers.Layer):
+    """
+    Keras Layer to decode predictions of the RetinaNet model
+    """
     def __init__(self, num_classes=80, confidence_threshold=0.05, nms_iou_threshold=0.5, max_detections_per_class=100,
-                 max_detections=100, box_variance=[0.1, 0.1, 0.2, 0.2], **kwargs):
+                 max_detections=100, box_variance=None, **kwargs):
+        """
+
+        :param num_classes: Number of classes in the Dataset
+        :param confidence_threshold: Minimum class probability
+        :param nms_iou_threshold: IOU threshold for NMS operation
+        :param max_detections_per_class: Maximum number of detections to retain per class
+        :param max_detections: Maximum number of detections to retain across all classes
+        :param box_variance: Scaling factors used to scale the bbox predictions
+        """
         super(DecodePredictions, self).__init__(**kwargs)
+        if box_variance is None:
+            box_variance = [0.1, 0.1, 0.2, 0.2]
         self.num_classes = num_classes
         self.confidence_threshold = confidence_threshold
         self.nms_iou_threshold = nms_iou_threshold

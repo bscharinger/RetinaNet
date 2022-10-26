@@ -45,7 +45,9 @@ inference_model = keras.Model(inputs=image, outputs=detections)
 test_ds, ds_info = tfds.load("coco/2017", split="test", data_dir="E:\ML_projects\RetinaNet\data", with_info=True)
 int2str = ds_info.features["objects"]["label"].int2str
 
-for sample in test_ds.take(4):
+test_ds = test_ds.shuffle(20000)
+
+for sample in test_ds.take(16):
     image = tf.cast(sample["image"], dtype=tf.float32)
     input_image, ratio = prep_img(image)
     detections = inference_model.predict(input_image)

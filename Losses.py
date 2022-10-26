@@ -1,6 +1,10 @@
 import tensorflow as tf
 
+
 class RetinaNetBoxLoss(tf.losses.Loss):
+    """
+    Implements Smooth L1 loss
+    """
     def __init__(self, delta):
         super(RetinaNetBoxLoss, self).__init__(reduction="none", name="RetinaNetBoxLoss")
         self._delta = delta
@@ -14,6 +18,9 @@ class RetinaNetBoxLoss(tf.losses.Loss):
 
 
 class RetinaNetClassificationLoss(tf.losses.Loss):
+    """
+    Implements focal loss
+    """
     def __init__(self, alpha, gamma):
         super(RetinaNetClassificationLoss, self).__init__(reduction="none", name="RetinaNetClassificationLoss")
         self._alpha = alpha
@@ -29,6 +36,9 @@ class RetinaNetClassificationLoss(tf.losses.Loss):
 
 
 class RetinaNetLoss(tf.losses.Loss):
+    """
+    Wrapper to combine the losses
+    """
     def __init__(self, num_classes=80, alpha=0.25, gamma=2.0, delta=1.0):
         super(RetinaNetLoss, self).__init__(reduction="auto", name="RetinaNetLoss")
         self._clf_loss = RetinaNetClassificationLoss(alpha, gamma)

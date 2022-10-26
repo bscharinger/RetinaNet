@@ -44,7 +44,7 @@ callbacks = [keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_dir, "w
 
 autotune = tf.data.AUTOTUNE
 train_ds = train_ds.map(preprocessing.preprocess_sample, num_parallel_calls=autotune)
-train_ds = train_ds.shuffle(8 * batch_size)
+train_ds = train_ds.shuffle(2000, reshuffle_each_iteration=True)
 train_ds = train_ds.padded_batch(batch_size=batch_size, padding_values=(0.0, 1e-8, -1), drop_remainder=True)
 train_ds = train_ds.map(label_encoder.encode_batch, num_parallel_calls=autotune)
 train_ds = train_ds.apply(tf.data.experimental.ignore_errors())
@@ -56,12 +56,23 @@ val_ds = val_ds.map(label_encoder.encode_batch, num_parallel_calls=autotune)
 val_ds = val_ds.apply(tf.data.experimental.ignore_errors())
 val_ds = val_ds.prefetch(autotune)
 
+# Uncomment the following lines, when training on full dataset
+# train_steps_per_epoch = dataset_info.splits["train"].num_examples // batch_size
+# val_steps_per_epoch = \
+#     dataset_info.splits["validation"].num_examples // batch_size
+#
+# train_steps = 4 * 100000
+# epochs = train_steps // train_steps_per_epoch
 epochs = 20
+
+
+# Running 100 training and 50 validation steps,
+# remove `.take` when training on the full dataset
 
 latest_ckpt = tf.train.latest_checkpoint(model_dir)
 model.load_weights(latest_ckpt)
 
-model.fit(train_ds.take(10000), validation_data=val_ds.take(1000), epochs=epochs, callbacks=callbacks, verbose=1)
+model.fit(train_ds.take(20000), validation_data=val_ds.take(2000), epochs=epochs, callbacks=callbacks, verbose=1)
 
 latest_ckpt = tf.train.latest_checkpoint(model_dir)
 model.load_weights(latest_ckpt)
@@ -73,7 +84,8 @@ inference_model = keras.Model(inputs=image, outputs=detections)
 
 int2str = dataset_info.features["objects"]["label"].int2str
 
-for sample in test_ds.take(4):
+
+for sample in test_ds.take(5):
     image = tf.cast(sample["image"], dtype=tf.float32)
     input_image, ratio = prep_img(image)
     detections = inference_model.predict(input_image)
