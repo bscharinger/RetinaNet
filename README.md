@@ -13,6 +13,8 @@ Training is done using the [main.py](main.py) file. To change the amount of imag
 The network was trained on a PC with a RTX 2070 with 8GB of memory. For now the network was trained for 28 Epochs with up to 40.000 images. Since training takes extremely long, the network improves only slowly, better results are expected with more training.
 
 ## Results
+For inference, run the file [predict.py](predict.py).
+
 For now, the network delivers relatively good results for objects it knows already, but it has still a lot of objects to learn.
 
 
