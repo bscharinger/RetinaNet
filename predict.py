@@ -6,6 +6,7 @@ import RetinaNet
 import Losses
 import tensorflow_datasets as tfds
 import bbox_utils
+import matplotlib.pyplot as plt
 
 
 def prep_img(img):
@@ -54,8 +55,7 @@ for sample in test_ds.take(16):
     num_detections = detections.valid_detections[0]
     class_names = [int2str(int(x)) for x in detections.nmsed_classes[0][:num_detections]]
     bbox_utils.visualize_bbox(image, detections.nmsed_boxes[0][:num_detections]/ratio,
-                              class_names, detections.nmsed_scores[0][:num_detections])
-
+                                   class_names, detections.nmsed_scores[0][:num_detections])
 
 
 

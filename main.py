@@ -72,7 +72,7 @@ epochs = 20
 latest_ckpt = tf.train.latest_checkpoint(model_dir)
 model.load_weights(latest_ckpt)
 
-model.fit(train_ds.take(20000), validation_data=val_ds.take(2000), epochs=epochs, callbacks=callbacks, verbose=1)
+model.fit(train_ds.take(40000), validation_data=val_ds.take(4000), epochs=epochs, callbacks=callbacks, verbose=1)
 
 latest_ckpt = tf.train.latest_checkpoint(model_dir)
 model.load_weights(latest_ckpt)
